@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ZipCRACK - Brute Force 4-Digit Zips</title>
+  <script src="https://gildas-lormeau.github.io/zip.js/demos/lib/zip.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      color: white;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+    h2 {
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+    .drop-zone {
+      border: 2px dashed #00ff88;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      width: 400px;
+      background: #1a1a1a;
+      transition: border-color 0.2s ease;
+    }
+    .drop-zone.dragover {
+      border-color: #00ff88;
+    }
+    .file-info {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #0f0;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .upload-btn, #crackButton {
+      margin-top: 20px;
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .upload-btn:hover, #crackButton:hover {
+      background: #00cc66;
+    }
+    .error {
+      color: #ff4444;
+      margin-top: 10px;
+    }
+    .small-text {
+      font-size: 10px;
+      color: gray;
+      text-align: center;
+      margin-top: 20px;
+    }
+    #watermark {
+      position: absolute;
+      bottom: 180px;
+      right: 20px;
+      font-size: 12px;
+      color: #666;
+      font-style: italic;
+    }
+    #attemptsLog {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 150px;
+      background: #111;
+      overflow-y: auto;
+      font-size: 12px;
+      padding: 10px;
+      box-sizing: border-box;
+      border-top: 2px solid #00ff88;
+      color: #00ff88;
+    }
+    #attemptsLog div {
+      margin-bottom: 5px;
+      white-space: pre;
+      animation: fadeIn 0.1s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .custom-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+    .custom-button img {
+      width: 40px;
+      height: 40px;
+    }
+    .custom-button img:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+  <img src="ZipCRACK_logo.png" alt="ZipCRACK Logo" style="width: 200px; margin-bottom: 10px;">
+<a href="http://jadeisdead.com/" target="_blank" class="custom-button">
+    <img src="https://media.tenor.com/yso9Ncqwm5UAAAAi/click-subscribe.gif" alt="Home">
+  </a>
+
+  <h1>ZipCRACK</h1>
+  <h2>Brute Forces Up to 4-Digit .ZIP Passwords</h2>
+
+  <label class="drop-zone" id="dropZone">
+    <p>Drag & drop your <strong>.zip</strong> file here<br>or click to upload</p>
+    <input type="file" id="fileInput" accept=".zip">
+  </label>
+
+  <div class="file-info" id="fileInfo"></div>
+  <button id="crackButton" style="display:none;">CRACK</button>
+  <div class="error" id="errorMsg"></div>
+
+  <p class="small-text">
+    This is purely meant for testing your own .zip files.<br>
+    Misuse or illegal uses are not allowed.
+  </p>
+
+  <div id="watermark">Created by Undead Nexus</div>
+  <div id="attemptsLog"></div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const errorMsg = document.getElementById('errorMsg');
+    const crackButton = document.getElementById('crackButton');
+    const attemptsLog = document.getElementById('attemptsLog');
+
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFile);
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      fileInput.files = e.dataTransfer.files;
+      handleFile({ target: { files: [file] } });
+    });
+
+    function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.name.endsWith('.zip')) {
+        selectedFile = file;
+        fileInfo.textContent = `✔️ Loaded file: ${file.name}`;
+        errorMsg.textContent = '';
+        crackButton.style.display = 'inline-block';
+      } else {
+        selectedFile = null;
+        fileInfo.textContent = '';
+        errorMsg.textContent = '❌ Only .zip files are allowed.';
+        fileInput.value = '';
+        crackButton.style.display = 'none';
+      }
+    }
+
+    crackButton.addEventListener('click', () => {
+      if (selectedFile) {
+        crackZipBruteForce(selectedFile);
+      }
+    });
+
+    async function crackZipBruteForce(file) {
+      errorMsg.textContent = 'Cracking... please wait';
+      attemptsLog.innerHTML = '';
+
+      let possibilities = [];
+      for (let i = 0; i <= 9; i++) possibilities.push(i.toString());
+      for (let i = 0; i <= 99; i++) possibilities.push(i.toString().padStart(2, '0'));
+      for (let i = 0; i <= 999; i++) possibilities.push(i.toString().padStart(3, '0'));
+      for (let i = 0; i <= 9999; i++) possibilities.push(i.toString().padStart(4, '0'));
+
+      for (let password of possibilities) {
+        const logEntry = document.createElement('div');
+        logEntry.textContent = `Trying password: ${password}`;
+        attemptsLog.appendChild(logEntry);
+        attemptsLog.scrollTop = attemptsLog.scrollHeight;
+
+        try {
+          const reader = new zip.ZipReader(new zip.BlobReader(file), { password });
+          const entries = await reader.getEntries();
+          if (entries.length > 0) {
+            try {
+              await entries[0].getData(new zip.TextWriter());
+              errorMsg.innerHTML = `✅ Password found: <strong>${password}</strong>`;
+              return;
+            } catch (readError) {
+              console.warn(`Password "${password}" failed to read file.`);
+            }
+          }
+        } catch (err) {
+          console.warn(`❌ Password '${password}' failed at opening.`, err?.message || err);
+        }
+      }
+
+      errorMsg.textContent = '❌ Failed to crack the password. [ERROR CODE: NO_MATCH]';
+    }
+  </script>
+
+</body>
+</html>
